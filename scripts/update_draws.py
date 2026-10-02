@@ -27,18 +27,43 @@ HEADERS = {
 }
 
 
-def fetch(year: int) -> str:
-    """Fetch one archive page, retrying slow or refused requests."""
-    last = None
-    for attempt in range(1, 5):
+def fetch_plain(url: str) -> str:
+    req = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=30) as r:
+        return r.read().decode("utf-8", "replace")
+
+
+def fetch_browser(url: str) -> str:
+    """Load the page in headless Chromium, for when the site ignores plain requests."""
+    from playwright.sync_api import sync_playwright  # installed by the workflow
+    with sync_playwright() as p:
+        browser = p.chromium.launch()
         try:
-            req = urllib.request.Request(URL.format(year=year), headers=HEADERS)
-            with urllib.request.urlopen(req, timeout=60) as r:
-                return r.read().decode("utf-8", "replace")
+            page = browser.new_page(user_agent=HEADERS["User-Agent"], locale="en-GB")
+            page.goto(url, wait_until="domcontentloaded", timeout=90000)
+            page.wait_for_selector("ul.balls", timeout=60000)
+            return page.content()
+        finally:
+            browser.close()
+
+
+def fetch(year: int) -> str:
+    """Fetch one archive page: two plain attempts, then a real browser."""
+    url = URL.format(year=year)
+    last = None
+    for attempt in (1, 2):
+        try:
+            return fetch_plain(url)
         except Exception as e:
             last = e
-            print(f"Forsøg {attempt} for {year} mislykkedes: {e}")
-            time.sleep(15 * attempt)
+            print(f"Almindelig hentning {attempt} for {year} mislykkedes: {e}")
+            time.sleep(10)
+    try:
+        print(f"Prøver med browser for {year} …")
+        return fetch_browser(url)
+    except Exception as e:
+        print(f"Browser-hentning for {year} mislykkedes: {e}")
+        last = e
     raise RuntimeError(last)
 
 
