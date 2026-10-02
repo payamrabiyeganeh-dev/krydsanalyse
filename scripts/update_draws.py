@@ -1,6 +1,6 @@
 """Add new Eurojackpot draws to data.json.
 
-Runs in GitHub Actions. Reads the yearly results archive on euro-jackpot.net,
+Runs in GitHub Actions. Retries a slow source and leaves data unchanged if it stays unreachable. Reads the yearly results archive on euro-jackpot.net,
 checks every overlapping draw against data.json, and appends only draws newer
 than the latest one already stored. Nothing is written if the source disagrees
 with existing data or cannot be read.
@@ -9,6 +9,7 @@ import datetime as dt
 import json
 import re
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -19,13 +20,26 @@ BALL = re.compile(r'<li[^>]*class="[^"]*\bball\b[^"]*"[^>]*>\s*<span>\s*(\d{1,2}
 EURO = re.compile(r'<li[^>]*class="[^"]*\beuro\b[^"]*"[^>]*>\s*<span>\s*(\d{1,2})\s*</span>')
 
 
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/129.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-GB,en;q=0.9",
+}
+
+
 def fetch(year: int) -> str:
-    req = urllib.request.Request(URL.format(year=year), headers={
-        "User-Agent": "Mozilla/5.0 (compatible; krydsanalyse-updater/1.0)",
-        "Accept-Language": "en",
-    })
-    with urllib.request.urlopen(req, timeout=40) as r:
-        return r.read().decode("utf-8", "replace")
+    """Fetch one archive page, retrying slow or refused requests."""
+    last = None
+    for attempt in range(1, 5):
+        try:
+            req = urllib.request.Request(URL.format(year=year), headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=60) as r:
+                return r.read().decode("utf-8", "replace")
+        except Exception as e:
+            last = e
+            print(f"Forsøg {attempt} for {year} mislykkedes: {e}")
+            time.sleep(15 * attempt)
+    raise RuntimeError(last)
 
 
 def parse(html: str) -> dict:
@@ -54,9 +68,9 @@ def main() -> int:
     for year in range(int(latest[:4]), today.year + 1):
         try:
             found.update(parse(fetch(year)))
-        except Exception as e:  # network or HTTP error
-            print(f"Kunne ikke hente {year}: {e}")
-            return 1
+        except Exception as e:  # source unreachable: keep data as is, try again next run
+            print(f"::warning::Kunne ikke hente {year} ({e}). Data er uændret; der prøves igen ved næste kørsel.")
+            return 0
     if not found:
         print("Ingen trækninger fundet på kildesiden. Sidens opbygning kan være ændret.")
         return 1
