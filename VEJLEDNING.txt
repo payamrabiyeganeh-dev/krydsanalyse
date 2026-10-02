@@ -1,0 +1,45 @@
+EUROJACKPOT KRYDSANALYSE – OPSÆTNING (ca. 15 minutter, gratis)
+
+Appen ligger på GitHub Pages. GitHub henter hver morgen nye trækninger fra
+euro-jackpot.net og gemmer dem i data.json. Appen henter data.json, hver gang
+den åbnes, og virker også uden internet med de senest gemte data.
+
+1. LÆG APPEN PÅ NETTET
+   a. Opret en gratis konto på https://github.com
+   b. Tryk "New repository". Navn fx  krydsanalyse , vælg "Public", tryk "Create repository".
+   c. Tryk "uploading an existing file". Træk disse filer og mapper ind:
+      index.html, app.js, data.js, data.json, sw.js, manifest.webmanifest,
+      xlsx.full.min.js, VEJLEDNING.txt og mapperne icons og scripts.
+      Tryk "Commit changes".
+   d. Settings → Pages: under "Branch" vælg "main" og "/ (root)", tryk "Save".
+      Efter 1–2 minutter står adressen øverst, fx https://ditnavn.github.io/krydsanalyse/
+
+2. SLÅ AUTOMATISK OPDATERING TIL
+   Mappen ".github" er skjult på Mac og Windows, så den oprettes direkte på GitHub:
+   a. I dit repository: tryk "Add file" → "Create new file".
+   b. Skriv filnavnet præcis:  .github/workflows/update.yml
+   c. Åbn filen OPSAETNING/update.yml fra denne zip, kopier hele indholdet og indsæt det.
+   d. Tryk "Commit changes".
+   e. Gå til fanen "Actions" → "Opdater trækninger" → "Run workflow" for at køre den første gang.
+      Efter ca. 1 minut er data.json opdateret med de nyeste trækninger.
+   Hvis kørslen fejler med "Permission denied": Settings → Actions → General →
+   "Workflow permissions" → vælg "Read and write permissions" → Save, og kør igen.
+
+   Herefter kører opdateringen selv hver morgen kl. ca. 7. Fejler den (fx hvis
+   euro-jackpot.net ændrer sin side), sender GitHub dig en e-mail, og appen
+   bruger blot de data, den allerede har. Opdateringen skriver aldrig noget, hvis
+   kilden er uenig med de trækninger, der allerede er gemt.
+
+3. INSTALLER PÅ TELEFONEN
+   iPhone:  Åbn adressen i Safari → Del-knappen (firkant med pil op) → "Føj til hjemmeskærm".
+   Android: Åbn adressen i Chrome → "Installer" (fanen Data) eller menuen ⋮ → "Installer app".
+
+4. BRUG
+   - "Indstil": seneste trækning, periode A og B og reglerne.
+   - "Rækker": foreslåede rækker og den fulde placering.
+   - "Data": status for opdatering, knappen "Søg efter nye trækninger", egen Excel-fil
+     og manuel indtastning, hvis en trækning mangler.
+
+BEMÆRK
+   - Adressen er offentlig, men indeholder kun offentlige lottoresultater.
+   - Rækkerne følger dine regler, men har samme vinderchance som alle andre rækker.

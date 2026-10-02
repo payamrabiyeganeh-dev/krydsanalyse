@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="da">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Krydsanalyse</title>
+<meta name="description" content="Krydser hyppigheden af Eurojackpot-tal i to valgfrie perioder og foreslår rækker.">
+<meta name="theme-color" content="#165c4c" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0e1413" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Krydsanalyse">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<style>
+/* Layout: app bar + three views (Rækker / Indstil / Data). Phones: one view at a time with a bottom tab bar. Wide screens: settings and data in a left column, results on the right, no tab bar. */
+:root{
+  --bg:#f2f5f4; --surface:#ffffff; --ink:#17211f; --muted:#5b6a66; --line:#d8e0dd;
+  --accent:#1d6b58; --accent-ink:#ffffff; --accent-soft:#e1efea; --bar:#165c4c; --bar-ink:#ffffff;
+  --star:#a86d00; --star-bg:#fff2d2; --star-line:#e8c777;
+  --ball-bg:#ffffff; --ball-line:#9fb3ad; --warn:#a9481a; --warn-bg:#fbe9df; --ok:#1d6b58; --hl:#eef6f3;
+  --f-body:-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --f-mono:ui-monospace, "SF Mono", "Roboto Mono", Menlo, Consolas, monospace;
+  --r:12px; --tabh:58px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0e1413; --surface:#162020; --ink:#e4ecea; --muted:#94a5a0; --line:#2a3735;
+  --accent:#5cc4a7; --accent-ink:#0b1715; --accent-soft:#1c312c; --bar:#121b1a; --bar-ink:#e4ecea;
+  --star:#f2b84a; --star-bg:#33280f; --star-line:#6b5419;
+  --ball-bg:#1c2928; --ball-line:#4b605b; --warn:#f29763; --warn-bg:#3a2216; --ok:#5cc4a7; --hl:#1b2a28; color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+.appbar{position:sticky;top:0;z-index:5;background:var(--bar);color:var(--bar-ink);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.appbar h1{margin:0;font-size:1.15rem;font-weight:700;letter-spacing:-.01em}
+.appbar .sub{font-size:.78rem;opacity:.8;font-variant-numeric:tabular-nums;text-align:right}
+main{max-width:1180px;margin:0 auto;padding:16px 16px calc(var(--tabh) + env(safe-area-inset-bottom,0px) + 24px)}
+.layout{display:grid;gap:16px}
+.view{display:grid;gap:16px;align-content:start;min-width:0}
+@media (max-width:899px){ .view{display:none} .view.on{display:grid} }
+@media (min-width:900px){
+  .layout{grid-template-columns:minmax(320px,370px) minmax(0,1fr);align-items:start}
+  .side{display:grid;gap:16px;position:sticky;top:64px}
+  #v-results{grid-column:2;grid-row:1 / span 2}
+  .tabbar{display:none!important}
+  main{padding-bottom:32px}
+}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:grid;gap:12px;min-width:0}
+.card h2{margin:0;font-size:1.05rem;font-weight:700}
+.eyebrow{font-size:.72rem;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.eyebrow b{color:var(--accent);font-weight:600;text-transform:none;letter-spacing:0;font-size:.8rem}
+label.f{display:grid;gap:4px;font-size:.85rem;color:var(--muted)}
+select,input[type=number],input[type=date]{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 10px;width:100%;min-height:44px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--bg)}
+.seg label{flex:1;position:relative}
+.seg input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.seg span{display:flex;align-items:center;justify-content:center;min-height:42px;padding:6px 4px;font-size:.9rem;cursor:pointer;color:var(--muted);text-align:center}
+.seg label + label span{border-left:1px solid var(--line)}
+.seg input:checked + span{background:var(--accent);color:var(--accent-ink);font-weight:600}
+.seg input:focus-visible + span{outline:2px solid var(--accent);outline-offset:-3px}
+.btn{font:inherit;font-weight:600;border:1px solid var(--accent);background:var(--accent);color:var(--accent-ink);border-radius:10px;padding:10px 14px;min-height:44px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;text-decoration:none}
+.btn.ghost{background:transparent;color:var(--accent)}
+.btn.small{min-height:34px;padding:4px 10px;font-size:.85rem}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.status{font-size:.88rem;color:var(--muted)}
+.status strong{color:var(--ink)}
+.warn{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:9px 11px;font-size:.86rem}
+.okmsg{background:var(--accent-soft);color:var(--ok);border-radius:10px;padding:9px 11px;font-size:.86rem}
+.hint{font-size:.82rem;color:var(--muted);margin:0}
+.tickets{display:grid;gap:10px}
+.ticket{display:flex;flex-wrap:wrap;align-items:center;gap:10px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--bg)}
+.ticket .lbl{font-size:.8rem;color:var(--muted);width:100%}
+.balls{display:flex;gap:6px;flex-wrap:wrap}
+.ball{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-mono);font-weight:700;font-variant-numeric:tabular-nums;background:var(--ball-bg);border:2px solid var(--ball-line)}
+.ball.s{background:var(--star-bg);border-color:var(--star-line);color:var(--star);border-radius:9px;transform:rotate(45deg);width:34px;height:34px;margin:3px}
+.ball.s i{transform:rotate(-45deg);font-style:normal}
+.sep{width:1px;height:30px;background:var(--line)}
+@media (max-width:479px){.ticket .sep{display:none}}
+@media (min-width:480px){.ticket .lbl{width:auto;min-width:62px}}
+.periods{display:grid;grid-template-columns:1fr;gap:10px}
+@media (min-width:600px){.periods{grid-template-columns:1fr 1fr}}
+.pcard{border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;display:grid;gap:3px;font-size:.88rem}
+.pcard .t{font-weight:600}
+.pcard .m{color:var(--muted);font-variant-numeric:tabular-nums}
+.tables{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
+@media (min-width:1100px){.tables{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)}}
+.tbl{overflow:auto;max-height:560px;border:1px solid var(--line);border-radius:var(--r);-webkit-overflow-scrolling:touch}
+table{border-collapse:collapse;width:100%;font-size:.88rem;font-variant-numeric:tabular-nums}
+th,td{padding:6px 9px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--surface);font-weight:600;color:var(--muted);font-size:.76rem}
+th:nth-child(2),td:nth-child(2){text-align:center}
+td.num{font-family:var(--f-mono);font-weight:700}
+tr.used td{background:var(--hl)}
+tr.out td{color:var(--muted);opacity:.55}
+.foot{font-size:.82rem;color:var(--muted);margin:0}
+.empty{color:var(--muted);font-size:.92rem}
+.entry{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.entry input{text-align:center;padding:9px 2px}
+.entry2{display:grid;grid-template-columns:repeat(2,1fr) 3fr;gap:6px}
+.entry2 input{text-align:center;padding:9px 2px}
+.list{display:grid;gap:6px}
+.li{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:.88rem;border:1px solid var(--line);border-radius:10px;padding:6px 8px 6px 12px;font-variant-numeric:tabular-nums}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+.tabbar button{flex:1;height:var(--tabh);border:0;background:none;color:var(--muted);font:inherit;font-size:.75rem;font-weight:600;display:grid;place-items:center;align-content:center;gap:3px;cursor:pointer}
+.tabbar button svg{width:22px;height:22px}
+.tabbar button[aria-selected="true"]{color:var(--accent)}
+.install{display:none}
+.install.show{display:grid}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<header class="appbar">
+  <h1>Krydsanalyse</h1>
+  <div class="sub" id="barSub"></div>
+</header>
+
+<main>
+  <div class="layout">
+    <section class="view on" id="v-results" aria-label="Rækker">
+      <div class="card">
+        <div class="eyebrow">Foreslåede rækker <b id="ruleSummary"></b></div>
+        <div class="tickets" id="tickets"></div>
+        <div id="ticketNote"></div>
+      </div>
+      <div class="card">
+        <h2>Perioder</h2>
+        <div class="periods" id="periods"></div>
+        <div id="periodWarn"></div>
+      </div>
+      <div class="card">
+        <h2>Placering af alle tal</h2>
+        <div class="tables">
+          <div style="display:grid;gap:6px;min-width:0"><div class="eyebrow">Vindertal 1–50</div><div class="tbl" id="tMain"></div></div>
+          <div style="display:grid;gap:6px;min-width:0"><div class="eyebrow">Stjernetal 1–12</div><div class="tbl" id="tStar"></div></div>
+        </div>
+        <p class="foot">Hver periode giver hvert tal en placering (1 = bedst efter periodens regel; lige antal deler placering). Summen af de to placeringer afgør rækkefølgen. Ved lige sum vinder tallet, der er bedst i periode A, derefter i periode B. Rækkefølgen beskriver kun, hvad der allerede er trukket: trækningerne er uafhængige, og alle rækker har samme chance.</p>
+      </div>
+    </section>
+
+    <div class="side">
+      <section class="view" id="v-settings" aria-label="Indstil">
+        <div class="card">
+          <div class="eyebrow">Seneste tilgængelige trækning</div>
+          <select id="cutoff" aria-label="Seneste tilgængelige trækning"></select>
+          <p class="hint">Alle perioder slutter på denne dato. Trækninger efter den ignoreres.</p>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Periode A <b id="sumA"></b></div>
+          <div class="row2">
+            <label class="f">Måneder tilbage<input type="number" inputmode="numeric" id="mA" min="1" max="240" value="20"></label>
+            <label class="f">Trækninger<select id="dA"><option value="all">Alle</option><option value="2">Kun tirsdage</option><option value="5">Kun fredage</option></select></label>
+          </div>
+          <div class="seg" role="radiogroup" aria-label="Regel for periode A">
+            <label><input type="radio" name="rA" value="hi"><span>Hyppigste</span></label>
+            <label><input type="radio" name="rA" value="lo"><span>Mindst hyppige</span></label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Periode B <b id="sumB"></b></div>
+          <div class="row2">
+            <label class="f">Måneder tilbage<input type="number" inputmode="numeric" id="mB" min="1" max="240" value="10"></label>
+            <label class="f">Trækninger<select id="dB"><option value="all">Alle</option><option value="2">Kun tirsdage</option><option value="5">Kun fredage</option></select></label>
+          </div>
+          <div class="seg" role="radiogroup" aria-label="Regel for periode B">
+            <label><input type="radio" name="rB" value="hi"><span>Hyppigste</span></label>
+            <label><input type="radio" name="rB" value="lo"><span>Mindst hyppige</span></label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Krydsning og rækker</div>
+          <div class="seg" role="radiogroup" aria-label="Metode">
+            <label><input type="radio" name="meth" value="sum"><span>Samlet placering</span></label>
+            <label><input type="radio" name="meth" value="top"><span>Top N i begge</span></label>
+          </div>
+          <div class="row2" id="topBox">
+            <label class="f">N vindertal<input type="number" inputmode="numeric" id="nMain" min="5" max="50" value="20"></label>
+            <label class="f">N stjernetal<input type="number" inputmode="numeric" id="nStar" min="2" max="12" value="6"></label>
+          </div>
+          <label class="f">Antal rækker<input type="number" inputmode="numeric" id="nRows" min="1" max="10" value="3"></label>
+          <p class="hint" id="methHint"></p>
+        </div>
+      </section>
+
+      <section class="view" id="v-data" aria-label="Data">
+        <div class="card">
+          <div class="eyebrow">Data</div>
+          <div class="status" id="dataStatus"></div>
+          <div class="status" id="syncStatus"></div>
+          <div class="btns">
+            <button class="btn" id="checkNow" type="button">Søg efter nye trækninger</button>
+          </div>
+          <p class="hint">Appen søger selv efter nye trækninger, hver gang den åbnes. Serveren henter nye resultater hver morgen.</p>
+          <div id="dataWarn"></div>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Egen Excel-fil (valgfrit)</div>
+          <div class="btns">
+            <label class="btn ghost" for="file">Indlæs Excel-fil</label>
+            <input id="file" type="file" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden>
+            <button class="btn ghost" id="reset" type="button">Fjern indlæst fil</button>
+          </div>
+          <p class="hint">Filen skal have kolonnerne Ugedag, Dato, Vindertal_01–05 og Stjernertal_01–02 som numbers.xlsx. Den udfylder kun datoer, som de online data mangler.</p>
+        </div>
+        <div class="card">
+          <div class="eyebrow">Tilføj trækning manuelt</div>
+          <label class="f">Dato<input type="date" id="eDate"></label>
+          <div class="f" style="display:grid;gap:4px;font-size:.85rem;color:var(--muted)">Vindertal
+            <div class="entry" id="eMain">
+              <input type="number" inputmode="numeric" min="1" max="50" aria-label="Vindertal 1"><input type="number" inputmode="numeric" min="1" max="50" aria-label="Vindertal 2"><input type="number" inputmode="numeric" min="1" max="50" aria-label="Vindertal 3"><input type="number" inputmode="numeric" min="1" max="50" aria-label="Vindertal 4"><input type="number" inputmode="numeric" min="1" max="50" aria-label="Vindertal 5">
+            </div>
+          </div>
+          <div class="f" style="display:grid;gap:4px;font-size:.85rem;color:var(--muted)">Stjernetal
+            <div class="entry2" id="eStar">
+              <input type="number" inputmode="numeric" min="1" max="12" aria-label="Stjernetal 1"><input type="number" inputmode="numeric" min="1" max="12" aria-label="Stjernetal 2"><button class="btn" id="eAdd" type="button">Tilføj</button>
+            </div>
+          </div>
+          <div id="eMsg"></div>
+          <a class="btn ghost small" href="https://www.euro-jackpot.net/results" target="_blank" rel="noopener" style="justify-self:start">Se seneste resultater</a>
+          <div class="list" id="manualList"></div>
+        </div>
+        <div class="card install" id="installCard">
+          <div class="eyebrow">Installer appen</div>
+          <p class="hint" id="installText"></p>
+          <button class="btn" id="installBtn" type="button" hidden>Installer</button>
+        </div>
+      </section>
+    </div>
+  </div>
+</main>
+
+<nav class="tabbar" role="tablist" aria-label="Visninger">
+  <button role="tab" aria-selected="true" data-v="v-results"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="7" cy="12" r="3.2"/><circle cx="15" cy="12" r="3.2"/><path d="M21 9l2 3-2 3-2-3z"/></svg>Rækker</button>
+  <button role="tab" aria-selected="false" data-v="v-settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Indstil</button>
+  <button role="tab" aria-selected="false" data-v="v-data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/></svg>Data</button>
+</nav>
+
+<script src="xlsx.full.min.js" defer></script>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

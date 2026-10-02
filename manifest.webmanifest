@@ -1,0 +1,17 @@
+{
+  "name": "Eurojackpot Krydsanalyse",
+  "short_name": "Krydsanalyse",
+  "description": "Krydser hyppigheden af Eurojackpot-tal i to valgfrie perioder og foreslår rækker.",
+  "lang": "da",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f2f5f4",
+  "theme_color": "#165c4c",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
